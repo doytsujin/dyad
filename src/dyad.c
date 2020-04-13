@@ -38,7 +38,7 @@
 
 #include "dyad.h"
 
-#define DYAD_VERSION "0.2.1"
+#define DYAD_VERSION "0.2.2"
 
 
 #ifdef _WIN32
@@ -83,7 +83,7 @@
 
 static void panic(const char *fmt, ...);
 
-static void *dyad_realloc(void *ptr, int n) {
+static void *dyad_realloc(void *ptr, size_t n) {
   ptr = realloc(ptr, n);
   if (!ptr && n != 0) {
     panic("out of memory");
@@ -101,7 +101,7 @@ static void dyad_free(void *ptr) {
 /* Vec (dynamic array)                                                       */
 /*===========================================================================*/
 
-static void vec_expand(char **data, int *length, int *capacity, int memsz) {
+static void vec_expand(char **data, size_t *length, size_t *capacity, size_t memsz) {
   if (*length + 1 > *capacity) {
     if (*capacity == 0) {
       *capacity = 1;
@@ -113,7 +113,7 @@ static void vec_expand(char **data, int *length, int *capacity, int memsz) {
 }
 
 static void vec_splice(
-  char **data, int *length, int *capacity, int memsz, int start, int count
+  char **data, size_t *length, size_t *capacity, size_t memsz, size_t start, size_t count
 ) {
   (void) capacity;
   memmove(*data + start * memsz,
@@ -123,7 +123,7 @@ static void vec_splice(
 
 
 #define Vec(T)\
-  struct { T *data; int length, capacity; }
+  struct { T *data; size_t length, capacity; }
 
 
 #define vec_unpack(v)\
@@ -179,7 +179,7 @@ enum {
 };
 
 typedef struct {
-  int capacity;
+  size_t capacity;
   dyad_Socket maxfd;
   fd_set *fds[SELECT_MAX];
 } SelectSet;
@@ -188,7 +188,7 @@ typedef struct {
 
 
 static void select_deinit(SelectSet *s) {
-  int i;
+  size_t i;
   for (i = 0; i < SELECT_MAX; i++) {
     dyad_free(s->fds[i]);
     s->fds[i] = NULL;
@@ -198,8 +198,8 @@ static void select_deinit(SelectSet *s) {
 
 
 static void select_grow(SelectSet *s) {
-  int i;
-  int oldCapacity = s->capacity;
+  size_t i;
+  size_t oldCapacity = s->capacity;
   s->capacity = s->capacity ? s->capacity << 1 : 1;
   for (i = 0; i < SELECT_MAX; i++) {
     s->fds[i] = dyad_realloc(s->fds[i], s->capacity * sizeof(fd_set));
@@ -210,7 +210,7 @@ static void select_grow(SelectSet *s) {
 
 
 static void select_zero(SelectSet *s) {
-  int i;
+  size_t i;
   if (s->capacity == 0) return;
   s->maxfd = 0;
   for (i = 0; i < SELECT_MAX; i++) {
@@ -281,7 +281,7 @@ struct dyad_Stream {
   dyad_Socket sockfd;
   char *address;
   int port;
-  int bytesSent, bytesReceived;
+  size_t bytesSent, bytesReceived;
   double lastActivity, timeout;
   Vec(Listener) listeners;
   Vec(char) lineBuffer;
@@ -294,7 +294,7 @@ struct dyad_Stream {
 
 
 static dyad_Stream *dyad_streams;
-static int dyad_streamCount;
+static size_t dyad_streamCount;
 static char dyad_panicMsgBuffer[128];
 static dyad_PanicCallback panicCallback;
 static SelectSet dyad_selectSet;
@@ -414,7 +414,7 @@ static void stream_destroy(dyad_Stream *stream) {
 
 
 static void stream_emitEvent(dyad_Stream *stream, dyad_Event *e) {
-  int i;
+  size_t i;
   e->stream = stream;
   for (i = 0; i < stream->listeners.length; i++) {
     Listener *listener = &stream->listeners.data[i];
@@ -504,7 +504,7 @@ static int stream_initSocket(
 
 
 static int stream_hasListenerForEvent(dyad_Stream *stream, int event) {
-  int i;
+  size_t i;
   for (i = 0; i < stream->listeners.length; i++) {
     Listener *listener = &stream->listeners.data[i];
     if (listener->event == event) {
@@ -549,7 +549,7 @@ static void stream_handleReceivedData(dyad_Stream *stream) {
 
     /* Handle line event */
     if (stream_hasListenerForEvent(stream, DYAD_EVENT_LINE)) {
-      int i, start;
+      size_t i, start;
       char *buf;
       for (i = 0; i < size; i++) {
         vec_push(&stream->lineBuffer, data[i]);
@@ -558,7 +558,6 @@ static void stream_handleReceivedData(dyad_Stream *stream) {
       buf = stream->lineBuffer.data;
       for (i = 0; i < stream->lineBuffer.length; i++) {
         if (buf[i] == '\n') {
-          dyad_Event e;
           buf[i] = '\0';
           e = createEvent(DYAD_EVENT_LINE);
           e.msg = "received line";
@@ -591,7 +590,7 @@ static void stream_acceptPendingConnections(dyad_Stream *stream) {
   for (;;) {
     dyad_Stream *remote;
     dyad_Event e;
-    int err = 0;
+    size_t err = 0;
     dyad_Socket sockfd = accept(stream->sockfd, NULL, NULL);
     if (sockfd == INVALID_SOCKET) {
       err = errno;
@@ -624,7 +623,7 @@ static int stream_flushWriteBuffer(dyad_Stream *stream) {
   stream->flags &= ~DYAD_FLAG_WRITTEN;
   if (stream->writeBuffer.length > 0) {
     /* Send data */
-    int size = send(stream->sockfd, stream->writeBuffer.data,
+    size_t size = send(stream->sockfd, stream->writeBuffer.data,
                     stream->writeBuffer.length, 0);
     if (size <= 0) {
       if (errno == EWOULDBLOCK) {
@@ -841,7 +840,7 @@ double dyad_getTime(void) {
 }
 
 
-int dyad_getStreamCount(void) {
+size_t dyad_getStreamCount(void) {
   return dyad_streamCount;
 }
 
@@ -895,7 +894,7 @@ void dyad_addListener(
 void dyad_removeListener(
   dyad_Stream *stream, int event, dyad_Callback callback, void *udata
 ) {
-  int i = stream->listeners.length;
+  size_t i = stream->listeners.length;
   while (i--) {
     Listener *x = &stream->listeners.data[i];
     if (x->event == event && x->callback == callback && x->udata == udata) {
@@ -909,7 +908,7 @@ void dyad_removeAllListeners(dyad_Stream *stream, int event) {
   if (event == DYAD_EVENT_NULL) {
     vec_clear(&stream->listeners);
   } else {
-    int i = stream->listeners.length;
+    size_t i = stream->listeners.length;
     while (i--) {
       if (stream->listeners.data[i].event == event) {
         vec_splice(&stream->listeners, i, 1);
@@ -1036,7 +1035,7 @@ fail:
 }
 
 
-void dyad_write(dyad_Stream *stream, const void *data, int size) {
+void dyad_write(dyad_Stream *stream, const void *data, size_t size) {
   const char *p = data;
   while (size--) {
     vec_push(&stream->writeBuffer, *p++);
@@ -1121,7 +1120,7 @@ void dyad_setTimeout(dyad_Stream *stream, double seconds) {
 
 
 void dyad_setNoDelay(dyad_Stream *stream, int opt) {
-  opt = !!opt;
+  opt = opt != 0;
   setsockopt(stream->sockfd, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt));
 }
 
@@ -1141,12 +1140,12 @@ int dyad_getPort(dyad_Stream *stream) {
 }
 
 
-int dyad_getBytesSent(dyad_Stream *stream) {
+size_t dyad_getBytesSent(dyad_Stream *stream) {
   return stream->bytesSent;
 }
 
 
-int dyad_getBytesReceived(dyad_Stream *stream) {
+size_t dyad_getBytesReceived(dyad_Stream *stream) {
   return stream->bytesReceived;
 }
 

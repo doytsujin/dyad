@@ -35,7 +35,7 @@ typedef struct {
   dyad_Stream *remote;
   const char *msg;
   char *data;
-  int size;
+  size_t size;
 } dyad_Event;
 
 typedef void (*dyad_Callback)(dyad_Event*);
@@ -70,7 +70,7 @@ void dyad_update(void);
 void dyad_shutdown(void);
 const char *dyad_getVersion(void);
 double dyad_getTime(void);
-int  dyad_getStreamCount(void);
+size_t  dyad_getStreamCount(void);
 void dyad_setTickInterval(double seconds);
 void dyad_setUpdateTimeout(double seconds);
 dyad_PanicCallback dyad_atPanic(dyad_PanicCallback func);
@@ -87,7 +87,7 @@ void dyad_removeListener(dyad_Stream *stream, int event,
 void dyad_removeAllListeners(dyad_Stream *stream, int event);
 void dyad_end(dyad_Stream *stream);
 void dyad_close(dyad_Stream *stream);
-void dyad_write(dyad_Stream *stream, const void *data, int size);
+void dyad_write(dyad_Stream *stream, const void *data, size_t size);
 void dyad_vwritef(dyad_Stream *stream, const char *fmt, va_list args);
 void dyad_writef(dyad_Stream *stream, const char *fmt, ...);
 void dyad_setTimeout(dyad_Stream *stream, double seconds);
@@ -95,8 +95,8 @@ void dyad_setNoDelay(dyad_Stream *stream, int opt);
 int  dyad_getState(dyad_Stream *stream);
 const char *dyad_getAddress(dyad_Stream *stream);
 int  dyad_getPort(dyad_Stream *stream);
-int  dyad_getBytesSent(dyad_Stream *stream);
-int  dyad_getBytesReceived(dyad_Stream *stream);
+size_t  dyad_getBytesSent(dyad_Stream *stream);
+size_t  dyad_getBytesReceived(dyad_Stream *stream);
 dyad_Socket dyad_getSocket(dyad_Stream *stream);
 
 #ifdef __cplusplus

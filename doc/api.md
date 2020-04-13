@@ -29,7 +29,7 @@ Returns the version of the library as a string.
 Returns the current time in seconds. This time should only be used for
 comparisons, as no specific epoch is guaranteed.
 
-#### int dyad\_getStreamCount(void) 
+#### size_t dyad\_getStreamCount(void) 
 Returns the number of currently active streams.
 
 #### void dyad\_setUpdateTimeout(double seconds)
@@ -77,7 +77,7 @@ function.
 Removes all listeners for the given `event`. If `event` is `DYAD_EVENT_NULL`
 then all listeners for all events are removed.
 
-#### void dyad\_write(dyad\_Stream \*stream, const void \*data, int size)
+#### void dyad\_write(dyad\_Stream \*stream, const void \*data, size_t size)
 Writes the `data` of the given `size` to the stream. If you want to send a
 null terminated string use `dyad_writef()` instead.
 
@@ -124,11 +124,11 @@ the local address, for connected streams it is the remote address.
 Returns the current `port` the `stream` is using. For listening streams this is
 the local port, for connected streams it is the remote port.
 
-#### int dyad\_getBytesReceived(dyad\_Stream \*stream)
+#### size_t dyad\_getBytesReceived(dyad\_Stream \*stream)
 Returns the number of bytes which have been received by the `stream` since it
 was made.
 
-#### int dyad\_getBytesSent(dyad\_Stream \*stream)
+#### size_t dyad\_getBytesSent(dyad\_Stream \*stream)
 Returns the number of bytes which have been sent by the `stream` since it was
 made. This does not include the data in the stream's write buffer which is
 still waiting to be sent.
@@ -232,7 +232,7 @@ dyad\_Stream \*stream | The stream which emitted this event
 dyad\_Stream \*remote | The client stream when a connection is accepted
 const char \*msg      | A description of the event or error message
 char \*data           | The events associated data
-int size              | The size in bytes of the event's associated data
+size_t size           | The size in bytes of the event's associated data
 
 The `dyad_Event` struct and the data pointed to by its `data` field should
 never be modified by an event callback.
